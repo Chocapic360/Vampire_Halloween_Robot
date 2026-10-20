@@ -8,10 +8,10 @@ cooldown between boos.
 
 ## Hardware
 
-- Arduino Uno R4 WiFi
+- Arduino Nano (ATmega328P, 5 V; CH340 USB clone). Also builds for the Uno R4 WiFi.
 - HC-SR04 ultrasonic sensor: TRIG -> pin 3, ECHO -> pin 2
 - Soundboard trigger -> pin 4 (pulled to GND to "press"; each press plays the next track)
-- PCA9685 servo driver (I2C, 0x40) with MG996R servos on channels 0 and 1,
+- PCA9685 servo driver (I2C, 0x40: SDA -> A4, SCL -> A5) with MG996R servos on channels 0 and 1,
   servos powered from an external supply on V+
 
 ## Libraries
@@ -21,5 +21,5 @@ cooldown between boos.
 ## Build and upload
 
 ```
-arduino-cli compile --upload -p /dev/ttyACM0 --fqbn arduino:renesas_uno:unor4wifi Vampire_Halloween_Robot
+arduino-cli compile --upload -p /dev/ttyUSB0 --fqbn arduino:avr:nano Vampire_Halloween_Robot
 ```
