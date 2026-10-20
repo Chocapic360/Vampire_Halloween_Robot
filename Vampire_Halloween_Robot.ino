@@ -45,10 +45,10 @@ const int TAP_GAP_MS = 100;     // pause between skip taps
 int nextTrack = 1;              // track the module will play on the next press
 
 int Bat = 5;
-int Organ = 2;
-int Thunder = 3;
-int Laugh = 4;
-int Scream = 1;
+int Organ = 1;
+int Thunder = 2;
+int Laugh = 3;
+int Scream = 4;
 
 // Servos (PCA9685)
 Adafruit_PWMServoDriver pwm(0x40);
