@@ -107,6 +107,20 @@ void setup() {
   // configure the echo pin to input mode
   pinMode(echoPin, INPUT);
 
+  // don't let a stuck I2C bus freeze the sketch (and the ultrasonic sensor)
+  Wire.begin();
+#ifdef WIRE_HAS_TIMEOUT
+  Wire.setWireTimeout(3000, true);  // 3 ms, reset the bus on timeout
+#endif
+
+  // check the servo board answers before using it
+  Wire.beginTransmission(0x40);
+  if (Wire.endTransmission() == 0) {
+    Serial.println("PCA9685 found");
+  } else {
+    Serial.println("PCA9685 not found - check VCC, GND, SDA (A4), SCL (A5)");
+  }
+
   // start both servos at rest (minimum)
   pwm.begin();
   pwm.setPWMFreq(50);
