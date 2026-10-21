@@ -4,7 +4,8 @@
  * Based on the ultrasonic and ultrasonic-Display sketches (ArduinoGetStarted's
  * HC-SR04 tutorial). Prints "Boo!" and plays the scream track on the
  * soundboard when something stays closer than the threshold distance for at
- * least 5 readings in a row, and turns the servos 90 degrees until it leaves.
+ * least 5 readings in a row. The servos snap 90 degrees, hold, then slowly go
+ * back to rest, sometimes with a "double take" (fake going down, jump back up).
  *
  * Wiring: Ultrasonic Sensor -> Arduino:
  * - VCC  -> 5VDC
@@ -51,7 +52,17 @@ const int SERVO2 = 1;  // MG996R on channel 1
 // Initial pulse limits in microseconds (assumed to span 0-180 degrees)
 const int SERVOMIN = 900;
 const int SERVOMAX = 2300;
-const int SERVO90  = SERVOMIN + (SERVOMAX - SERVOMIN) / 2;  // 90 degrees from rest
+// Up position for the boo. The midpoint (1600 us) only turned ~30 degrees,
+// so use the full range; raise SERVOMAX if it still doesn't reach 90.
+const int SERVO90  = SERVOMAX;
+
+// Boo motion
+const unsigned long HOLD_MS     = 2000;  // stay up at 90 degrees
+const unsigned long RETURN_MS   = 2500;  // slow sweep back to rest
+const int DOUBLE_TAKE_CHANCE    = 15;    // percent of boos that do a double take
+const int DOUBLE_TAKE_LOW       = SERVO90 - (SERVO90 - SERVOMIN) / 3;  // fakes going a third of the way down
+const unsigned long DOUBLE_TAKE_PAUSE_MS = 400;   // pause low before jumping back up
+const unsigned long DOUBLE_TAKE_HOLD_MS  = 1000;  // stay up after the jump
 
 float duration_us, distance_cm, distance_raw_cm;
 int closeCount = 0;
@@ -78,9 +89,36 @@ void moveServos(int pulseUs) {
   setServoPulse(SERVO2, pulseUs);
 }
 
+// move both servos gradually from one pulse to another (one step per 20 ms servo frame)
+void sweepServos(int fromUs, int toUs, unsigned long durationMs) {
+  int steps = durationMs / 20;
+  for (int i = 1; i <= steps; i++) {
+    moveServos(fromUs + (long)(toUs - fromUs) * i / steps);
+    delay(20);
+  }
+}
+
+// snap up, hold, then slowly go back down (sometimes with a double take)
+void booMotion() {
+  moveServos(SERVO90);
+  pressButton();  // play the scream
+  delay(HOLD_MS);
+
+  if (random(100) < DOUBLE_TAKE_CHANCE) {
+    Serial.println("Double take!");
+    sweepServos(SERVO90, DOUBLE_TAKE_LOW, RETURN_MS / 3);  // same speed as the real return
+    delay(DOUBLE_TAKE_PAUSE_MS);
+    moveServos(SERVO90);  // jump back up
+    delay(DOUBLE_TAKE_HOLD_MS);
+  }
+
+  sweepServos(SERVO90, SERVOMIN, RETURN_MS);
+}
+
 void setup() {
   // begin serial port
   Serial.begin(9600);
+  randomSeed(analogRead(A0));  // A0 is unconnected, its noise seeds the double take
 
   // configure the trigger pin to output mode
   pinMode(trigPin, OUTPUT);
@@ -138,17 +176,13 @@ void loop() {
     bool cooledDown = !hasBooed || millis() - lastBooMs >= BOO_COOLDOWN_MS;
     if (closeCount >= REQUIRED_READINGS && !booPrinted && cooledDown) {
       Serial.println("Boo!");
-      moveServos(SERVO90);
-      pressButton();  // play the scream
+      booMotion();
       booPrinted = true;  // only once per approach
       hasBooed = true;
-      lastBooMs = millis();
+      lastBooMs = millis();  // cooldown starts once the servos are back at rest
     }
   } else {
     // reset once they move away
-    if (booPrinted) {
-      moveServos(SERVOMIN);  // back to rest
-    }
     closeCount = 0;
     booPrinted = false;
   }

@@ -39,12 +39,16 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
 - Boo logic: `closeCount` counts consecutive readings below `THRESHOLD_CM` (10 cm).
   At `REQUIRED_READINGS` (5) it fires once (`booPrinted`), only if the 10 s cooldown
   (`BOO_COOLDOWN_MS`, tracked with `hasBooed`/`lastBooMs`) has passed. Firing does:
-  print "Boo!" -> `moveServos(SERVO90)` -> `pressButton()` (scream).
-  Any far/invalid reading resets the count, re-arms the boo, and if a boo happened
-  returns servos to `SERVOMIN` (rest).
+  print "Boo!" -> `booMotion()` (blocking, ~4.5-8 s): snap to `SERVO90` + scream press,
+  hold `HOLD_MS` (2 s), then `sweepServos()` slowly back to `SERVOMIN` over `RETURN_MS`.
+  `DOUBLE_TAKE_CHANCE` (15 %) of boos first sweep a third of the way down (`DOUBLE_TAKE_LOW`), pause, jump
+  back to 90 and hold before the real return (`random()` seeded from unconnected A0).
+  `lastBooMs` is set after the motion, so the cooldown counts from back-at-rest.
+  Any far/invalid reading resets the count and re-arms the boo; it no longer moves the
+  servos (that reset was what made them twitch back right after a boo).
 - Servos: `setServoPulse()` converts microseconds to PCA9685 ticks at 50 Hz.
-  `SERVOMIN` 900 us (rest), `SERVOMAX` 2300 us, `SERVO90` = midpoint (assumes the range
-  spans ~180 degrees; not measured).
+  `SERVOMIN` 900 us (rest), `SERVOMAX` 2300 us, `SERVO90` = `SERVOMAX` (the boo up position).
+  The old midpoint (1600 us, 700 us of travel) only turned ~30 degrees on the real servos.
 - Soundboard: only one recording (the scream), so a single 50 ms press always plays it.
   Multi-track selection by counting presses was dropped: the module can't report its
   position and missed/extra presses kept desyncing the count (wrong sound played).
