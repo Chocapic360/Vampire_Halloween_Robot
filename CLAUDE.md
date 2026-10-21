@@ -41,7 +41,7 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
   (`BOO_COOLDOWN_MS`, tracked with `hasBooed`/`lastBooMs`) has passed. Firing does:
   print "Boo!" -> `booMotion()` (blocking, ~4.5-8 s): snap to `SERVO90` + scream press,
   hold `HOLD_MS` (2 s), then `sweepServos()` slowly back to `SERVOMIN` over `RETURN_MS`.
-  `DOUBLE_TAKE_CHANCE` (15 %) of boos first sweep a third of the way down (`DOUBLE_TAKE_LOW`), pause, jump
+  `DOUBLE_TAKE_CHANCE` (25 %) of boos first sweep a third of the way down (`DOUBLE_TAKE_LOW`), pause, jump
   back to 90 and hold before the real return (`random()` seeded from unconnected A0).
   `lastBooMs` is set after the motion, so the cooldown counts from back-at-rest.
   Any far/invalid reading resets the count and re-arms the boo; it no longer moves the

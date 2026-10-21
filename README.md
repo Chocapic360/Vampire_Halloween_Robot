@@ -3,7 +3,7 @@
 Arduino sketch for a Halloween robot. When someone stays closer than 10 cm to
 the HC-SR04 ultrasonic sensor for 5 readings in a row, it prints "Boo!",
 turns two MG996R servos 90 degrees and plays the scream track on a soundboard.
-The servos hold for 2 seconds, then slowly go back to rest. About 1 in 7 boos
+The servos hold for 2 seconds, then slowly go back to rest. About 1 in 4 boos
 adds a "double take": the vampire starts going down, then jumps back up before
 the real return. There is a 10 second cooldown after the servos are back at rest.
 

@@ -59,7 +59,7 @@ const int SERVO90  = SERVOMAX;
 // Boo motion
 const unsigned long HOLD_MS     = 2000;  // stay up at 90 degrees
 const unsigned long RETURN_MS   = 2500;  // slow sweep back to rest
-const int DOUBLE_TAKE_CHANCE    = 15;    // percent of boos that do a double take
+const int DOUBLE_TAKE_CHANCE    = 25;    // percent of boos that do a double take
 const int DOUBLE_TAKE_LOW       = SERVO90 - (SERVO90 - SERVOMIN) / 3;  // fakes going a third of the way down
 const unsigned long DOUBLE_TAKE_PAUSE_MS = 400;   // pause low before jumping back up
 const unsigned long DOUBLE_TAKE_HOLD_MS  = 1000;  // stay up after the jump
