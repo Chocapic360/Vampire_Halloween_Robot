@@ -14,6 +14,7 @@
  *
  * Wiring: Soundboard -> Arduino:
  * - Trigger -> Pin 4 (pulled to GND to "press" it)
+ * - Only the scream is recorded on the module, so every press plays it
  * - GND     -> GND
  *
  * Wiring: PCA9685 servo driver (0x40) -> Arduino:
@@ -37,18 +38,9 @@ const float THRESHOLD_CM      = 10.0;  // trigger distance
 const int   REQUIRED_READINGS = 5;     // consecutive readings below threshold
 const unsigned long BOO_COOLDOWN_MS = 10000;  // wait after a boo before the next one
 
-// Soundboard: each press plays the next track, cycling 1..TOTAL_TRACKS
+// Soundboard: holds only the scream, so each press plays it
 const int SOUND_PIN = 4;
-const int TOTAL_TRACKS = 5;     // number of recordings on the module
 const int PRESS_MS = 50;        // how long each "press" lasts
-const int TAP_GAP_MS = 100;     // pause between skip taps
-int nextTrack = 1;              // track the module will play on the next press
-
-int Bat = 5;
-int Organ = 1;
-int Thunder = 2;
-int Laugh = 3;
-int Scream = 4;
 
 // Servos (PCA9685)
 Adafruit_PWMServoDriver pwm(0x40);
@@ -86,18 +78,6 @@ void moveServos(int pulseUs) {
   setServoPulse(SERVO2, pulseUs);
 }
 
-// press as many times as needed so the last press plays the target track
-void playTrack(int target) {
-  int presses = (target - nextTrack + TOTAL_TRACKS) % TOTAL_TRACKS + 1;
-
-  for (int i = 0; i < presses; i++) {
-    pressButton();
-    if (i < presses - 1) delay(TAP_GAP_MS);
-  }
-
-  nextTrack = target % TOTAL_TRACKS + 1;
-}
-
 void setup() {
   // begin serial port
   Serial.begin(9600);
@@ -130,7 +110,6 @@ void setup() {
   // leave the soundboard trigger released until needed
   pinMode(SOUND_PIN, INPUT);
   delay(1000);          // let the module settle
-  // The module should be on track 1 right after power-up
 }
 
 void loop() {
@@ -160,7 +139,7 @@ void loop() {
     if (closeCount >= REQUIRED_READINGS && !booPrinted && cooledDown) {
       Serial.println("Boo!");
       moveServos(SERVO90);
-      playTrack(Scream);
+      pressButton();  // play the scream
       booPrinted = true;  // only once per approach
       hasBooed = true;
       lastBooMs = millis();
