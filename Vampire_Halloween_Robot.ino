@@ -18,6 +18,8 @@
  * - Only the scream is recorded on the module, so every press plays it
  * - GND     -> GND
  *
+ * Wiring: Red LEDs -> Pin 5 (HIGH = on, lit during the boo)
+ *
  * Wiring: PCA9685 servo driver (0x40) -> Arduino:
  * - SDA -> SDA, SCL -> SCL, VCC -> 5V, GND -> GND
  * - MG996R servos on channels 0 and 1, powered from V+ (external supply)
@@ -42,6 +44,9 @@ const unsigned long BOO_COOLDOWN_MS = 10000;  // wait after a boo before the nex
 // Soundboard: holds only the scream, so each press plays it
 const int SOUND_PIN = 4;
 const int PRESS_MS = 50;        // how long each "press" lasts
+
+// Red LEDs, on while the vampire is up
+const int LED_PIN = 5;
 
 // Servos (PCA9685)
 Adafruit_PWMServoDriver pwm(0x40);
@@ -100,6 +105,7 @@ void sweepServos(int fromUs, int toUs, unsigned long durationMs) {
 
 // snap up, hold, then slowly go back down (sometimes with a double take)
 void booMotion() {
+  digitalWrite(LED_PIN, HIGH);
   moveServos(SERVO90);
   pressButton();  // play the scream
   delay(HOLD_MS);
@@ -113,6 +119,7 @@ void booMotion() {
   }
 
   sweepServos(SERVO90, SERVOMIN, RETURN_MS);
+  digitalWrite(LED_PIN, LOW);
 }
 
 void setup() {
@@ -144,6 +151,10 @@ void setup() {
   pwm.setPWMFreq(50);
   delay(500);
   moveServos(SERVOMIN);
+
+  // LEDs off until the boo
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
   // leave the soundboard trigger released until needed
   pinMode(SOUND_PIN, INPUT);

@@ -18,6 +18,8 @@ pushed over SSH). Commit and push only when asked.
   "pressed" by switching to OUTPUT LOW. Each press plays the NEXT track. Module is an
   XLW 16MB push-button recorder (single button, `config.txt` with `IO=01`/`PLAY=XX`;
   PLAY=01 = press interrupts playback). Only the scream is recorded on it now.
+- Red LEDs -> D5, HIGH = on. Lit for the whole `booMotion()` (on at the snap up, off
+  once the servos are back at rest).
 - PCA9685 servo driver at I2C 0x40: SDA -> A4, SCL -> A5, **VCC -> Nano 5V**, common GND.
   Servos (2x MG996R, channels 0 and 1) powered from a separate supply on V+.
 
