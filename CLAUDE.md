@@ -21,7 +21,8 @@ pushed over SSH). Commit and push only when asked.
 - Red LEDs -> D5, HIGH = on. Lit for the whole `booMotion()` (on at the snap up, off
   once the servos are back at rest).
 - PCA9685 servo driver at I2C 0x40: SDA -> A4, SCL -> A5, **VCC -> Nano 5V**, common GND.
-  Servos (2x MG996R, channels 0 and 1) powered from a separate supply on V+.
+  Servos (2x MG996R) powered from a separate supply on V+: channel 0 = servo 1 = `WINGS`,
+  channel 1 = servo 2 = `BODY` (raises Dracula).
 
 ## Build / upload / monitor
 
@@ -41,10 +42,14 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
 - Boo logic: `closeCount` counts consecutive readings below `THRESHOLD_CM` (10 cm).
   At `REQUIRED_READINGS` (5) it fires once (`booPrinted`), only if the 10 s cooldown
   (`BOO_COOLDOWN_MS`, tracked with `hasBooed`/`lastBooMs`) has passed. Firing does:
-  print "Boo!" -> `booMotion()` (blocking, ~4.5-8 s): snap to `SERVO90` + scream press,
-  hold `HOLD_MS` (2 s), then `sweepServos()` slowly back to `SERVOMIN` over `RETURN_MS`.
-  `DOUBLE_TAKE_CHANCE` (25 %) of boos first sweep a third of the way down (`DOUBLE_TAKE_LOW`), pause, jump
-  back to 90 and hold before the real return (`random()` seeded from unconnected A0).
+  print "Boo!" -> `booMotion()` (blocking, ~17.5-21 s): LEDs on, `BODY` snaps to `SERVO90`
+  + scream press, wait `RISE_MS` (2 s) before flapping, `flapWings()` opens `WINGS` to `SERVOMAX` for
+  `WING_STROKE_MS` (0.9 s), closes to `SERVOMIN` for the same time (even flaps), repeats while a
+  full flap still fits, then ends folded at `SERVOMIN` (+ `FOLD_MS`); the
+  whole up time is `HOLD_MS` (15 s). Then `sweepServo(BODY, ...)` slowly back to
+  `SERVOMIN` over `RETURN_MS`. Wings always fold before the body goes down.
+  `DOUBLE_TAKE_CHANCE` (25 %) of boos first sweep the body a third of the way down
+  (`DOUBLE_TAKE_LOW`), pause, jump back to 90 and hold (wings stay folded) before the real return (`random()` seeded from unconnected A0).
   `lastBooMs` is set after the motion, so the cooldown counts from back-at-rest.
   Any far/invalid reading resets the count and re-arms the boo; it no longer moves the
   servos (that reset was what made them twitch back right after a boo).
@@ -62,7 +67,7 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
 - **Do not lengthen `PRESS_MS`/`TAP_GAP_MS`.** Tried 100/150 ms to fix occasional wrong
   sounds: it made the wrong sound play every time. User asked to revert to 50/100.
   Wrong tracks were caused by press counting; solved by recording only one track.
-- Keep the order `moveServos(SERVO90)` then the scream press (the reverse was part of
+- Keep the order body up (`SERVO90`) then the scream press (the reverse was part of
   the reverted attempt).
 - "Ultrasonic stops working when the servo board is on A4/A5" was the PCA9685 VCC not
   connected: the unpowered chip held SDA/SCL low and Wire hung forever. Fix was wiring

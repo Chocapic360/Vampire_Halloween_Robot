@@ -22,7 +22,8 @@
  *
  * Wiring: PCA9685 servo driver (0x40) -> Arduino:
  * - SDA -> SDA, SCL -> SCL, VCC -> 5V, GND -> GND
- * - MG996R servos on channels 0 and 1, powered from V+ (external supply)
+ * - MG996R servos powered from V+ (external supply):
+ *   channel 0 = servo 1 (wings), channel 1 = servo 2 (raises Dracula)
  */
 
 #include <Wire.h>
@@ -51,8 +52,8 @@ const int LED_PIN = 5;
 // Servos (PCA9685)
 Adafruit_PWMServoDriver pwm(0x40);
 
-const int SERVO1 = 0;  // MG996R on channel 0
-const int SERVO2 = 1;  // MG996R on channel 1
+const int WINGS = 0;  // servo 1 (channel 0): flaps Dracula's wings
+const int BODY  = 1;  // servo 2 (channel 1): raises Dracula
 
 // Initial pulse limits in microseconds (assumed to span 0-180 degrees)
 const int SERVOMIN = 900;
@@ -62,7 +63,10 @@ const int SERVOMAX = 2300;
 const int SERVO90  = SERVOMAX;
 
 // Boo motion
-const unsigned long HOLD_MS     = 2000;  // stay up at 90 degrees
+const unsigned long HOLD_MS     = 15000; // total time Dracula stays up
+const unsigned long RISE_MS     = 2000;  // wait after rising before the wings start
+const unsigned long WING_STROKE_MS = 900; // wings stay open this long, then closed this long
+const unsigned long FOLD_MS     = 500;   // time for the wings to get back to min
 const unsigned long RETURN_MS   = 2500;  // slow sweep back to rest
 const int DOUBLE_TAKE_CHANCE    = 25;    // percent of boos that do a double take
 const int DOUBLE_TAKE_LOW       = SERVO90 - (SERVO90 - SERVOMIN) / 3;  // fakes going a third of the way down
@@ -90,35 +94,52 @@ void setServoPulse(int channel, int pulseUs) {
 }
 
 void moveServos(int pulseUs) {
-  setServoPulse(SERVO1, pulseUs);
-  setServoPulse(SERVO2, pulseUs);
+  setServoPulse(WINGS, pulseUs);
+  setServoPulse(BODY, pulseUs);
 }
 
-// move both servos gradually from one pulse to another (one step per 20 ms servo frame)
-void sweepServos(int fromUs, int toUs, unsigned long durationMs) {
+// move one servo gradually from one pulse to another (one step per 20 ms servo frame)
+void sweepServo(int channel, int fromUs, int toUs, unsigned long durationMs) {
   int steps = durationMs / 20;
   for (int i = 1; i <= steps; i++) {
-    moveServos(fromUs + (long)(toUs - fromUs) * i / steps);
+    setServoPulse(channel, fromUs + (long)(toUs - fromUs) * i / steps);
     delay(20);
   }
 }
 
-// snap up, hold, then slowly go back down (sometimes with a double take)
+// flap the wings between min and max for a while, ending folded at min
+void flapWings(unsigned long durationMs) {
+  unsigned long start = millis();
+  // only start a flap if it can finish in time
+  while (millis() - start + 2 * WING_STROKE_MS <= durationMs) {
+    setServoPulse(WINGS, SERVOMAX);  // open
+    delay(WING_STROKE_MS);
+    setServoPulse(WINGS, SERVOMIN);  // close
+    delay(WING_STROKE_MS);
+  }
+  while (millis() - start < durationMs) delay(20);  // wait out the rest, folded
+  setServoPulse(WINGS, SERVOMIN);
+  delay(FOLD_MS);
+}
+
+// rise, flap, fold the wings, then slowly sit back down (sometimes with a double take)
 void booMotion() {
   digitalWrite(LED_PIN, HIGH);
-  moveServos(SERVO90);
+  setServoPulse(BODY, SERVO90);
   pressButton();  // play the scream
-  delay(HOLD_MS);
+  delay(RISE_MS);  // only flap once fully up (and a moment longer)
+
+  flapWings(HOLD_MS - RISE_MS - FOLD_MS);
 
   if (random(100) < DOUBLE_TAKE_CHANCE) {
     Serial.println("Double take!");
-    sweepServos(SERVO90, DOUBLE_TAKE_LOW, RETURN_MS / 3);  // same speed as the real return
+    sweepServo(BODY, SERVO90, DOUBLE_TAKE_LOW, RETURN_MS / 3);  // same speed as the real return
     delay(DOUBLE_TAKE_PAUSE_MS);
-    moveServos(SERVO90);  // jump back up
+    setServoPulse(BODY, SERVO90);  // jump back up
     delay(DOUBLE_TAKE_HOLD_MS);
   }
 
-  sweepServos(SERVO90, SERVOMIN, RETURN_MS);
+  sweepServo(BODY, SERVO90, SERVOMIN, RETURN_MS);
   digitalWrite(LED_PIN, LOW);
 }
 
