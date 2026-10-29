@@ -18,7 +18,7 @@
  * - Only the scream is recorded on the module, so every press plays it
  * - GND     -> GND
  *
- * Wiring: Red LEDs -> Pin 5 (HIGH = on, lit during the boo)
+ * Wiring: Red LEDs -> Pins 5 and 6 (HIGH = on, lit during the boo)
  *
  * Wiring: PCA9685 servo driver (0x40) -> Arduino:
  * - SDA -> SDA, SCL -> SCL, VCC -> 5V, GND -> GND
@@ -46,8 +46,9 @@ const unsigned long BOO_COOLDOWN_MS = 10000;  // wait after a boo before the nex
 const int SOUND_PIN = 4;
 const int PRESS_MS = 50;        // how long each "press" lasts
 
-// Red LEDs, on while the vampire is up
-const int LED_PIN = 5;
+// Red LEDs, on while the vampire is up (both pins do the same thing)
+const int LED_PIN_1 = 5;
+const int LED_PIN_2 = 6;
 
 // Servos (PCA9685)
 Adafruit_PWMServoDriver pwm(0x40);
@@ -59,14 +60,19 @@ const int BODY  = 1;  // servo 2 (channel 1): raises Dracula
 const int SERVOMIN = 900;
 const int SERVOMAX = 2300;
 // Up position for the boo. The midpoint (1600 us) only turned ~30 degrees,
-// so use the full range; raise SERVOMAX if it still doesn't reach 90.
-const int SERVO90  = SERVOMAX;
+// so the full range is ~90 degrees; stand up ~15 degrees less than that
+// (1400 us / 90 deg ~ 15.5 us per degree -> ~233 us).
+const int SERVO90  = SERVOMAX - 233;
+
+// The wing servo is mounted backwards: folded at max, open at min
+const int WINGS_FOLDED = SERVOMAX;
+const int WINGS_OPEN   = SERVOMIN;
 
 // Boo motion
 const unsigned long HOLD_MS     = 15000; // total time Dracula stays up
 const unsigned long RISE_MS     = 2000;  // wait after rising before the wings start
 const unsigned long WING_STROKE_MS = 900; // wings stay open this long, then closed this long
-const unsigned long FOLD_MS     = 500;   // time for the wings to get back to min
+const unsigned long FOLD_MS     = 500;   // time for the wings to fold back
 const unsigned long RETURN_MS   = 2500;  // slow sweep back to rest
 const int DOUBLE_TAKE_CHANCE    = 25;    // percent of boos that do a double take
 const int DOUBLE_TAKE_LOW       = SERVO90 - (SERVO90 - SERVOMIN) / 3;  // fakes going a third of the way down
@@ -93,9 +99,9 @@ void setServoPulse(int channel, int pulseUs) {
   pwm.setPWM(channel, 0, ticks);
 }
 
-void moveServos(int pulseUs) {
-  setServoPulse(WINGS, pulseUs);
-  setServoPulse(BODY, pulseUs);
+void setLeds(int state) {
+  digitalWrite(LED_PIN_1, state);
+  digitalWrite(LED_PIN_2, state);
 }
 
 // move one servo gradually from one pulse to another (one step per 20 ms servo frame)
@@ -107,24 +113,24 @@ void sweepServo(int channel, int fromUs, int toUs, unsigned long durationMs) {
   }
 }
 
-// flap the wings between min and max for a while, ending folded at min
+// flap the wings open and closed for a while, ending folded
 void flapWings(unsigned long durationMs) {
   unsigned long start = millis();
   // only start a flap if it can finish in time
   while (millis() - start + 2 * WING_STROKE_MS <= durationMs) {
-    setServoPulse(WINGS, SERVOMAX);  // open
+    setServoPulse(WINGS, WINGS_OPEN);
     delay(WING_STROKE_MS);
-    setServoPulse(WINGS, SERVOMIN);  // close
+    setServoPulse(WINGS, WINGS_FOLDED);
     delay(WING_STROKE_MS);
   }
   while (millis() - start < durationMs) delay(20);  // wait out the rest, folded
-  setServoPulse(WINGS, SERVOMIN);
+  setServoPulse(WINGS, WINGS_FOLDED);
   delay(FOLD_MS);
 }
 
 // rise, flap, fold the wings, then slowly sit back down (sometimes with a double take)
 void booMotion() {
-  digitalWrite(LED_PIN, HIGH);
+  setLeds(HIGH);
   setServoPulse(BODY, SERVO90);
   pressButton();  // play the scream
   delay(RISE_MS);  // only flap once fully up (and a moment longer)
@@ -140,7 +146,7 @@ void booMotion() {
   }
 
   sweepServo(BODY, SERVO90, SERVOMIN, RETURN_MS);
-  digitalWrite(LED_PIN, LOW);
+  setLeds(LOW);
 }
 
 void setup() {
@@ -167,15 +173,17 @@ void setup() {
     Serial.println("PCA9685 not found - check VCC, GND, SDA (A4), SCL (A5)");
   }
 
-  // start both servos at rest (minimum)
+  // start both servos at rest (body down, wings folded)
   pwm.begin();
   pwm.setPWMFreq(50);
   delay(500);
-  moveServos(SERVOMIN);
+  setServoPulse(BODY, SERVOMIN);
+  setServoPulse(WINGS, WINGS_FOLDED);
 
   // LEDs off until the boo
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
+  pinMode(LED_PIN_1, OUTPUT);
+  pinMode(LED_PIN_2, OUTPUT);
+  setLeds(LOW);
 
   // leave the soundboard trigger released until needed
   pinMode(SOUND_PIN, INPUT);

@@ -18,10 +18,10 @@ pushed over SSH). Commit and push only when asked.
   "pressed" by switching to OUTPUT LOW. Each press plays the NEXT track. Module is an
   XLW 16MB push-button recorder (single button, `config.txt` with `IO=01`/`PLAY=XX`;
   PLAY=01 = press interrupts playback). Only the scream is recorded on it now.
-- Red LEDs -> D5, HIGH = on. Lit for the whole `booMotion()` (on at the snap up, off
+- Red LEDs -> D5 and D6 (both identical, `setLeds()`), HIGH = on. Lit for the whole `booMotion()` (on at the snap up, off
   once the servos are back at rest).
 - PCA9685 servo driver at I2C 0x40: SDA -> A4, SCL -> A5, **VCC -> Nano 5V**, common GND.
-  Servos (2x MG996R) powered from a separate supply on V+: channel 0 = servo 1 = `WINGS`,
+  Servos (2x MG996R) powered from a separate supply on V+: channel 0 = servo 1 = `WINGS` (mounted backwards: folded = `SERVOMAX`, open = `SERVOMIN`),
   channel 1 = servo 2 = `BODY` (raises Dracula).
 
 ## Build / upload / monitor
@@ -43,9 +43,9 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
   At `REQUIRED_READINGS` (5) it fires once (`booPrinted`), only if the 10 s cooldown
   (`BOO_COOLDOWN_MS`, tracked with `hasBooed`/`lastBooMs`) has passed. Firing does:
   print "Boo!" -> `booMotion()` (blocking, ~17.5-21 s): LEDs on, `BODY` snaps to `SERVO90`
-  + scream press, wait `RISE_MS` (2 s) before flapping, `flapWings()` opens `WINGS` to `SERVOMAX` for
-  `WING_STROKE_MS` (0.9 s), closes to `SERVOMIN` for the same time (even flaps), repeats while a
-  full flap still fits, then ends folded at `SERVOMIN` (+ `FOLD_MS`); the
+  + scream press, wait `RISE_MS` (2 s) before flapping, `flapWings()` opens `WINGS` to `WINGS_OPEN` for
+  `WING_STROKE_MS` (0.9 s), closes to `WINGS_FOLDED` for the same time (even flaps), repeats while a
+  full flap still fits, then ends folded at `WINGS_FOLDED` (+ `FOLD_MS`); the
   whole up time is `HOLD_MS` (15 s). Then `sweepServo(BODY, ...)` slowly back to
   `SERVOMIN` over `RETURN_MS`. Wings always fold before the body goes down.
   `DOUBLE_TAKE_CHANCE` (25 %) of boos first sweep the body a third of the way down
@@ -54,7 +54,8 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
   Any far/invalid reading resets the count and re-arms the boo; it no longer moves the
   servos (that reset was what made them twitch back right after a boo).
 - Servos: `setServoPulse()` converts microseconds to PCA9685 ticks at 50 Hz.
-  `SERVOMIN` 900 us (rest), `SERVOMAX` 2300 us, `SERVO90` = `SERVOMAX` (the boo up position).
+  `SERVOMIN` 900 us (rest), `SERVOMAX` 2300 us, `SERVO90` = `SERVOMAX - 233` (the boo up position, ~15 degrees short of full travel).
+  Wings rest at `WINGS_FOLDED` (`SERVOMAX`) because that servo is mounted backwards.
   The old midpoint (1600 us, 700 us of travel) only turned ~30 degrees on the real servos.
 - Soundboard: only one recording (the scream), so a single 50 ms press always plays it.
   Multi-track selection by counting presses was dropped: the module can't report its
