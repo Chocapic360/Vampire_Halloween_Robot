@@ -47,7 +47,7 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
   `WING_STROKE_MS` (0.9 s), closes to `WINGS_FOLDED` for the same time (even flaps), repeats while a
   full flap still fits, then ends folded at `WINGS_FOLDED` (+ `FOLD_MS`); the
   whole up time is `HOLD_MS` (15 s). Then `sweepServo(BODY, ...)` slowly back to
-  `SERVOMIN` over `RETURN_MS`. Wings always fold before the body goes down.
+  `SERVOMIN` over `RETURN_MS` (0.3 s, ~80% of the full-speed rise; the old 2.5 s crawl was jerky). Wings always fold before the body goes down.
   `DOUBLE_TAKE_CHANCE` (25 %) of boos first sweep the body a third of the way down
   (`DOUBLE_TAKE_LOW`), pause, jump back to 90 and hold (wings stay folded) before the real return (`random()` seeded from unconnected A0).
   `lastBooMs` is set after the motion, so the cooldown counts from back-at-rest.
