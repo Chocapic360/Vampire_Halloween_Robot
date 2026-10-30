@@ -39,17 +39,15 @@ before uploading. Library: Adafruit PWM Servo Driver Library (+ Adafruit BusIO).
   distance = `0.017 * duration_us`, then calibrated with `CAL_GAIN`/`CAL_OFFSET`
   (copied from the user's `ultrasonic-Display` project). Prints every reading.
   No echo prints as about `-1.87 cm` and never counts as "close".
-- Boo logic: `closeCount` counts consecutive readings below `THRESHOLD_CM` (10 cm).
+- Boo logic: `closeCount` counts consecutive readings below `THRESHOLD_CM` (30 cm).
   At `REQUIRED_READINGS` (5) it fires once (`booPrinted`), only if the 10 s cooldown
   (`BOO_COOLDOWN_MS`, tracked with `hasBooed`/`lastBooMs`) has passed. Firing does:
-  print "Boo!" -> `booMotion()` (blocking, ~17.5-21 s): LEDs on, `BODY` snaps to `SERVO90`
+  print "Boo!" -> `booMotion()` (blocking, ~17.5 s): LEDs on, `BODY` snaps to `SERVO90`
   + scream press, wait `RISE_MS` (2 s) before flapping, `flapWings()` opens `WINGS` to `WINGS_OPEN` for
   `WING_STROKE_MS` (0.9 s), closes to `WINGS_FOLDED` for the same time (even flaps), repeats while a
   full flap still fits, then ends folded at `WINGS_FOLDED` (+ `FOLD_MS`); the
   whole up time is `HOLD_MS` (15 s). Then `sweepServo(BODY, ...)` slowly back to
   `SERVOMIN` over `RETURN_MS` (0.3 s, ~80% of the full-speed rise; the old 2.5 s crawl was jerky). Wings always fold before the body goes down.
-  `DOUBLE_TAKE_CHANCE` (25 %) of boos first sweep the body a third of the way down
-  (`DOUBLE_TAKE_LOW`), pause, jump back to 90 and hold (wings stay folded) before the real return (`random()` seeded from unconnected A0).
   `lastBooMs` is set after the motion, so the cooldown counts from back-at-rest.
   Any far/invalid reading resets the count and re-arms the boo; it no longer moves the
   servos (that reset was what made them twitch back right after a boo).

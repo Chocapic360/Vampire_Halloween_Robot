@@ -5,7 +5,7 @@
  * HC-SR04 tutorial). Prints "Boo!" and plays the scream track on the
  * soundboard when something stays closer than the threshold distance for at
  * least 5 readings in a row. The servos snap 90 degrees, hold, then slowly go
- * back to rest, sometimes with a "double take" (fake going down, jump back up).
+ * back to rest.
  *
  * Wiring: Ultrasonic Sensor -> Arduino:
  * - VCC  -> 5VDC
@@ -38,7 +38,7 @@ const float CAL_GAIN   = 0.965;
 const float CAL_OFFSET = 1.800;
 
 // Boo settings
-const float THRESHOLD_CM      = 10.0;  // trigger distance
+const float THRESHOLD_CM      = 30.0;  // trigger distance
 const int   REQUIRED_READINGS = 5;     // consecutive readings below threshold
 const unsigned long BOO_COOLDOWN_MS = 10000;  // wait after a boo before the next one
 
@@ -74,10 +74,6 @@ const unsigned long RISE_MS     = 2000;  // wait after rising before the wings s
 const unsigned long WING_STROKE_MS = 900; // wings stay open this long, then closed this long
 const unsigned long FOLD_MS     = 500;   // time for the wings to fold back
 const unsigned long RETURN_MS   = 300;   // sweep back to rest at ~80% of the rise speed (rise is a ~0.25 s snap)
-const int DOUBLE_TAKE_CHANCE    = 25;    // percent of boos that do a double take
-const int DOUBLE_TAKE_LOW       = SERVO90 - (SERVO90 - SERVOMIN) / 3;  // fakes going a third of the way down
-const unsigned long DOUBLE_TAKE_PAUSE_MS = 400;   // pause low before jumping back up
-const unsigned long DOUBLE_TAKE_HOLD_MS  = 1000;  // stay up after the jump
 
 float duration_us, distance_cm, distance_raw_cm;
 int closeCount = 0;
@@ -128,7 +124,7 @@ void flapWings(unsigned long durationMs) {
   delay(FOLD_MS);
 }
 
-// rise, flap, fold the wings, then slowly sit back down (sometimes with a double take)
+// rise, flap, fold the wings, then slowly sit back down
 void booMotion() {
   setLeds(HIGH);
   setServoPulse(BODY, SERVO90);
@@ -137,14 +133,6 @@ void booMotion() {
 
   flapWings(HOLD_MS - RISE_MS - FOLD_MS);
 
-  if (random(100) < DOUBLE_TAKE_CHANCE) {
-    Serial.println("Double take!");
-    sweepServo(BODY, SERVO90, DOUBLE_TAKE_LOW, RETURN_MS / 3);  // same speed as the real return
-    delay(DOUBLE_TAKE_PAUSE_MS);
-    setServoPulse(BODY, SERVO90);  // jump back up
-    delay(DOUBLE_TAKE_HOLD_MS);
-  }
-
   sweepServo(BODY, SERVO90, SERVOMIN, RETURN_MS);
   setLeds(LOW);
 }
@@ -152,7 +140,6 @@ void booMotion() {
 void setup() {
   // begin serial port
   Serial.begin(9600);
-  randomSeed(analogRead(A0));  // A0 is unconnected, its noise seeds the double take
 
   // configure the trigger pin to output mode
   pinMode(trigPin, OUTPUT);
